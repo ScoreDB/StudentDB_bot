@@ -6,13 +6,11 @@ import jwt
 import requests
 
 BASE_URL = 'https://api.github.com'
+REPOSITORY = 'ScoreDB/studentdb-private-store'
+MANIFEST_FILE = 'meta.json'
+
 APP_ID = 92513
 INSTALLATION_ID = 13498280
-
-session = requests.Session()
-session.headers.update({
-    'Accept': 'application/vnd.github.v3+json'
-})
 
 
 def get_private_key() -> bytes:
@@ -50,8 +48,23 @@ def get_access_token() -> str:
     :return: An installation access token.
     """
     token = get_jwt_token()
-    response = session.post(f'{BASE_URL}/app/installations/{INSTALLATION_ID}/access_tokens', headers={
+    response = requests.post(f'{BASE_URL}/app/installations/{INSTALLATION_ID}/access_tokens', headers={
+        'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'Bearer {token}'
     })
     response.raise_for_status()
     return response.json()['token']
+
+
+def get_manifest(token: str) -> str:
+    """
+    Get the manifest file from store repository.
+
+    :return: Content of the manifest file.
+    """
+    response = requests.get(f'{BASE_URL}/repos/{REPOSITORY}/contents/{MANIFEST_FILE}?ref=latest', headers={
+        'Accept': 'application/vnd.github.v3.raw+json',
+        'Authorization': f'token {token}'
+    })
+    response.raise_for_status()
+    return response.json()
