@@ -1,9 +1,9 @@
-from math import floor
 from pathlib import Path
 from time import time as timestamp
 
 import jwt
 import requests
+from math import floor
 
 BASE_URL = 'https://api.github.com'
 REPOSITORY = 'ScoreDB/studentdb-private-store'
@@ -13,7 +13,7 @@ APP_ID = 92513
 INSTALLATION_ID = 13498280
 
 
-def get_private_key() -> bytes:
+def _get_private_key() -> bytes:
     directory = Path(__file__).resolve().parent.parent / 'keys'
     for path in directory.iterdir():
         if path.name.endswith('.pem'):
@@ -22,7 +22,7 @@ def get_private_key() -> bytes:
     raise FileNotFoundError('Private key file not found. Please place your private key in the `keys` directory.')
 
 
-def get_jwt_token() -> str:
+def _get_jwt_token() -> str:
     """
     Generate a JWT token with the app's private key.
 
@@ -30,7 +30,7 @@ def get_jwt_token() -> str:
 
     :return: A JWT token representing the app it self.
     """
-    key = get_private_key()
+    key = _get_private_key()
     time = floor(timestamp())
     return jwt.encode({
         'iat': time,  # Issued at time
@@ -39,7 +39,7 @@ def get_jwt_token() -> str:
     }, key, 'RS256').decode('utf-8')
 
 
-def get_access_token() -> str:
+def _get_access_token() -> str:
     """
     Creates an installation access token for the app's installation on an account.
 
@@ -47,7 +47,7 @@ def get_access_token() -> str:
 
     :return: An installation access token.
     """
-    token = get_jwt_token()
+    token = _get_jwt_token()
     response = requests.post(f'{BASE_URL}/app/installations/{INSTALLATION_ID}/access_tokens', headers={
         'Accept': 'application/vnd.github.v3+json',
         'Authorization': f'Bearer {token}'
@@ -56,7 +56,7 @@ def get_access_token() -> str:
     return response.json()['token']
 
 
-def get_manifest(token: str) -> str:
+def _get_manifest(token: str) -> str:
     """
     Get the manifest file from store repository.
 
