@@ -21,7 +21,7 @@ def get_private_key() -> bytes:
         if path.name.endswith('.pem'):
             with path.open('rb') as handler:
                 return handler.read()
-    raise FileNotFoundError('Private key file not found. Please place your private key in the `keys` folder.')
+    raise FileNotFoundError('Private key file not found. Please place your private key in the `keys` directory.')
 
 
 def get_jwt_token() -> str:
