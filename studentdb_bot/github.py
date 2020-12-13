@@ -5,6 +5,8 @@ import jwt
 import requests
 from math import floor
 
+from .types import Manifest
+
 BASE_URL = 'https://api.github.com'
 REPOSITORY = 'ScoreDB/studentdb-private-store'
 MANIFEST_FILE = 'meta.json'
@@ -56,7 +58,7 @@ def _get_access_token() -> str:
     return response.json()['token']
 
 
-def _get_manifest(token: str) -> str:
+def _get_manifest(token: str) -> Manifest:
     """
     Get the manifest file from store repository.
 
