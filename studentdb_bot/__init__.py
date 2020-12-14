@@ -2,7 +2,7 @@ import logging
 
 from environs import Env as _Env
 
-from .database import Database
+from ._database import Database
 
 # Logging config
 logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s',
@@ -12,3 +12,8 @@ logging.basicConfig(format='[%(asctime)s][%(levelname)s] %(message)s',
 env = _Env()
 env.read_env()
 logging.info('Env loaded.')
+
+__all__ = [
+    env,
+    Database
+]
