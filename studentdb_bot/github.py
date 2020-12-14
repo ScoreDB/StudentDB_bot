@@ -1,18 +1,20 @@
+from math import floor
 from pathlib import Path
 from time import time as timestamp
 
 import jwt
 import requests
-from math import floor
 
+from . import env
 from .types import Manifest
 
-BASE_URL = 'https://api.github.com'
-REPOSITORY = 'ScoreDB/studentdb-private-store'
-MANIFEST_FILE = 'meta.json'
-
-APP_ID = 92513
-INSTALLATION_ID = 13498280
+with env.prefixed('GITHUB_'):
+    BASE_URL = env.str('BASE_URL')
+    with env.prefixed('STORE_'):
+        REPOSITORY = env.str('REPOSITORY')
+        MANIFEST = env.str('MANIFEST')
+    APP_ID = env.int('APP_ID')
+    INSTALLATION_ID = env.int('INSTALLATION_ID')
 
 
 def _get_private_key() -> bytes:
@@ -64,7 +66,7 @@ def _get_manifest(token: str) -> Manifest:
 
     :return: Content of the manifest file.
     """
-    response = requests.get(f'{BASE_URL}/repos/{REPOSITORY}/contents/{MANIFEST_FILE}?ref=latest', headers={
+    response = requests.get(f'{BASE_URL}/repos/{REPOSITORY}/contents/{MANIFEST}', headers={
         'Accept': 'application/vnd.github.v3.raw+json',
         'Authorization': f'token {token}'
     })
