@@ -7,7 +7,8 @@ from typing import Optional
 import jwt
 import requests
 
-from . import env
+from ._env import env
+from ._messages import messages
 from .types import Manifest
 
 with env.prefixed('GITHUB_'):
@@ -26,10 +27,10 @@ def _get_private_key() -> bytes:
     directory = Path(__file__).resolve().parent.parent / 'keys'
     for path in directory.iterdir():
         if path.name.endswith('.pem'):
-            logging.info(f'Using private key at "{path}".')
+            logging.info(f'Using private key at "{path}"')
             with path.open('rb') as handler:
                 return handler.read()
-    raise FileNotFoundError('Private key file not found. Please place your private key in the `keys` directory.')
+    raise FileNotFoundError(messages['pkNotFound'])
 
 
 def _get_jwt_token() -> str:
@@ -69,7 +70,7 @@ def _get_access_token() -> str:
         access_token_cache = response.json()['token']
         access_token_cache_time = timestamp() + 600
     else:
-        logging.debug('Using cached access token.')
+        logging.debug('Using cached access token')
     return access_token_cache
 
 
