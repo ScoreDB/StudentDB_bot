@@ -1,6 +1,8 @@
+import logging
 from math import floor
 from pathlib import Path
 from time import time as timestamp
+from typing import Optional
 
 import jwt
 import requests
@@ -21,6 +23,7 @@ def _get_private_key() -> bytes:
     directory = Path(__file__).resolve().parent.parent / 'keys'
     for path in directory.iterdir():
         if path.name.endswith('.pem'):
+            logging.info(f'Using private key at "{path}".')
             with path.open('rb') as handler:
                 return handler.read()
     raise FileNotFoundError('Private key file not found. Please place your private key in the `keys` directory.')
