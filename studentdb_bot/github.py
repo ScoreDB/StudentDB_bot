@@ -18,6 +18,9 @@ with env.prefixed('GITHUB_'):
     APP_ID = env.int('APP_ID')
     INSTALLATION_ID = env.int('INSTALLATION_ID')
 
+access_token_cache: Optional[str] = None
+access_token_cache_time: int = 0
+
 
 def _get_private_key() -> bytes:
     directory = Path(__file__).resolve().parent.parent / 'keys'
@@ -54,13 +57,20 @@ def _get_access_token() -> str:
 
     :return: An installation access token.
     """
-    token = _get_jwt_token()
-    response = requests.post(f'{BASE_URL}/app/installations/{INSTALLATION_ID}/access_tokens', headers={
-        'Accept': 'application/vnd.github.v3+json',
-        'Authorization': f'Bearer {token}'
-    })
-    response.raise_for_status()
-    return response.json()['token']
+    global access_token_cache
+    global access_token_cache_time
+    if access_token_cache is None or timestamp() > access_token_cache_time - 60:
+        token = _get_jwt_token()
+        response = requests.post(f'{BASE_URL}/app/installations/{INSTALLATION_ID}/access_tokens', headers={
+            'Accept': 'application/vnd.github.v3+json',
+            'Authorization': f'Bearer {token}'
+        })
+        response.raise_for_status()
+        access_token_cache = response.json()['token']
+        access_token_cache_time = timestamp() + 600
+    else:
+        logging.debug('Using cached access token.')
+    return access_token_cache
 
 
 def _get_manifest(token: str) -> Manifest:
