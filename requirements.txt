@@ -1,0 +1,5 @@
+environs
+PyJWT
+python-telegram-bot
+requests
+SQLAlchemy
