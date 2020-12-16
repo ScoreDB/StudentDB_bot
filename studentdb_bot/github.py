@@ -2,7 +2,7 @@ import logging
 from math import floor
 from pathlib import Path
 from time import time as timestamp
-from typing import Optional
+from typing import Any, Optional, Dict
 
 import jwt
 import requests
@@ -92,7 +92,7 @@ def _get_manifest(token: str) -> Manifest:
     return response.json()
 
 
-def _get_current_user(token: str) -> dict:
+def _get_current_user(token: str) -> Dict[str, str]:
     """
     :return: Current user data
     """
@@ -120,7 +120,7 @@ def _check_permissions(token: str) -> bool:
     return response.json()['permission'] != 'none'
 
 
-def get_device_code() -> dict:
+def get_device_code() -> Dict[str, Any]:
     """
     Start a device-flow authorization.
 

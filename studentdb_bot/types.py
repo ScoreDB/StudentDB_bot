@@ -1,6 +1,6 @@
-from typing import TypedDict
+from typing import TypedDict, Dict, List
 
 
 class Manifest(TypedDict):
-    grades: dict[str, str]
-    photos: list[str]
+    grades: Dict[str, str]
+    photos: List[str]

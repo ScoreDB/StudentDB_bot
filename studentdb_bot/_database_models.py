@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from sqlalchemy import Column, ForeignKey, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -20,12 +22,12 @@ class Student(Base):
     eduid = Column(String(8), nullable=True)
 
     @property
-    def pinyin_full(self) -> tuple[str]:
+    def pinyin_full(self) -> Tuple[str]:
         values = [i.strip() for i in self._pinyin.split('/')]
         return tuple(values)
 
     @property
-    def pinyin_first(self) -> tuple[str]:
+    def pinyin_first(self) -> Tuple[str]:
         values = []
         for pinyin in self.pinyin_full:
             value = ''.join([i[0].strip() for i in pinyin.split(' ')])
