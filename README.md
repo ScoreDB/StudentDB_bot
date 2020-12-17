@@ -9,7 +9,7 @@ StudentDB 查询信息。
 
 ### 技术栈
 
-- 使用 [python-telegram-bot](https://github.com/python-telegram-bot/python-telegram-bot) 制成。**It's a really awesome
+- 使用 [`python-telegram-bot`](https://github.com/python-telegram-bot/python-telegram-bot) 制成。**It's a really awesome
   wrapper!**
 
 - 以 [GitHub App](https://docs.github.com/developers/apps) 的形式访问 GitHub API，来查询 StudentDB 在 GitHub 上的存储库。
