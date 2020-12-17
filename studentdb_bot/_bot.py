@@ -9,7 +9,6 @@ from telegram.ext import Updater, CallbackContext, \
     CallbackQueryHandler, CommandHandler, \
     PicklePersistence
 
-from ._database import Database
 from ._env import env
 from ._messages import messages
 from .github import check_auth as _check_auth, \
@@ -18,14 +17,13 @@ from .github import check_auth as _check_auth, \
 with env.prefixed('TELEGRAM_'):
     TOKEN = env.str('TOKEN')
 
-database = Database()
 updater: Optional[Updater] = None
 
 
 def init():
     global updater
 
-    persistence_file = Path(__file__).resolve().parent.parent / 'database/persistence.db'
+    persistence_file = Path(__file__).resolve().parent.parent / 'data/persistence.db'
     persistence = PicklePersistence(persistence_file)
     logging.info(f'Using persistence at "{persistence_file}"')
     updater = Updater(TOKEN, persistence=persistence, use_context=True)

@@ -1,20 +1,43 @@
+import csv
 import logging
-from pathlib import Path
+from io import StringIO
+from itertools import product
+from typing import List
 
-from sqlalchemy import create_engine
+import pypinyin
 
-from ._database_models import Base
+from ._database_models import Student
+from .algolia import update_students
+from .github import get_manifest, get_file
 
 
-class Database:
+def generate_pinyin(name: str) -> List[str]:
+    pinyin = pypinyin.pinyin(name, pypinyin.Style.NORMAL, True,
+                             'ignore', False, False, False)
+    result = [' '.join(i) for i in (product(*pinyin))]
+    result_short = []
+    for pinyin in result:
+        pinyin_short = ''.join([i[0] for i in pinyin.split(' ')])
+        if pinyin_short not in result_short:
+            result_short.append(pinyin_short)
+    return result + result_short
 
-    def __init__(self):
-        path = Path(__file__).resolve().parent.parent / 'database/database.sqlite'
-        enable_echo = logging.getLogger().level <= logging.DEBUG
-        self.engine = create_engine(f'sqlite:///{path}', echo=enable_echo)
-        logging.info(f'Using database at "{path}"')
-        Base.metadata.create_all(self.engine)
-        logging.debug(f'Tables created')
 
-    def get_user(self, user_id: int):
-        pass
+def update_database():
+    logging.info('Fetching manifest...')
+    manifest = get_manifest()
+
+    students = []
+    for grade, path in manifest['grades'].items():
+        logging.info(f'Processing {grade} student info...')
+        grade_data = get_file(path).decode('utf-8')
+        with StringIO(grade_data) as stream:
+            reader = csv.DictReader(stream, skipinitialspace=True)
+            for row in reader:
+                student: Student = row
+                student['gradeId'] = grade
+                student['pinyin'] = generate_pinyin(student['name'])
+                students.append(student)
+
+    update_students(students)
+    logging.info('Database updated')

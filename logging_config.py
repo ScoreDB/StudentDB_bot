@@ -18,3 +18,8 @@ formatter = logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s')
 stream.setFormatter(formatter)
 
 logger.addHandler(stream)
+
+
+def force_debug():
+    logger.setLevel(logging.DEBUG)
+    stream.setLevel(logging.DEBUG)
