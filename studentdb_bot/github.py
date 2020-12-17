@@ -1,3 +1,4 @@
+import json
 import logging
 from math import floor
 from pathlib import Path
@@ -77,19 +78,26 @@ def _get_access_token() -> str:
     return access_token_cache
 
 
-def _get_manifest(token: str) -> Manifest:
+def get_manifest() -> Manifest:
     """
     Get the manifest file from store repository.
 
     :return: Content of the manifest file.
     """
-    url = f'{API_BASE_URL}/repos/{REPOSITORY}/contents/{MANIFEST}'
+    return json.loads(get_file(MANIFEST))
+
+
+def get_file(path) -> bytes:
+    token = _get_access_token()
+    if path[0] == '/':
+        path = path[1:]
+    url = f'{API_BASE_URL}/repos/{REPOSITORY}/contents/{path}'
     response = requests.get(url, headers={
-        'Accept': 'application/vnd.github.v3.raw+json',
+        'Accept': 'application/vnd.github.v3.raw',
         'Authorization': f'token {token}'
     })
     response.raise_for_status()
-    return response.json()
+    return response.content
 
 
 def _get_current_user(token: str) -> Dict[str, str]:
