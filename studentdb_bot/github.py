@@ -25,6 +25,8 @@ with env.prefixed('GITHUB_'):
 access_token_cache: Optional[str] = None
 access_token_cache_time: int = 0
 
+manifest_cache: Optional[Manifest] = None
+
 
 def _get_private_key() -> bytes:
     directory = Path(__file__).resolve().parent.parent / 'keys'
@@ -84,7 +86,12 @@ def get_manifest() -> Manifest:
 
     :return: Content of the manifest file.
     """
-    return json.loads(get_file(MANIFEST))
+    global manifest_cache
+    if manifest_cache is None:
+        manifest_cache = json.loads(get_file(MANIFEST))
+    else:
+        logging.debug('Using cached manifest')
+    return manifest_cache
 
 
 def get_file(path) -> bytes:

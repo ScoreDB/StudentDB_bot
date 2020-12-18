@@ -1,23 +1,27 @@
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Optional
 
 from telegram import Update, InlineKeyboardButton, \
     InlineKeyboardMarkup, ParseMode
 from telegram.ext import Updater, CallbackContext, \
-    CallbackQueryHandler, CommandHandler, \
-    PicklePersistence
+    CallbackQueryHandler, CommandHandler, Filters, \
+    MessageHandler, PicklePersistence
 
 from ._env import env
 from ._messages import messages
 from .github import check_auth as _check_auth, \
-    get_check_auth_url_for_user, get_device_code
+    get_check_auth_url_for_user, get_device_code, \
+    get_manifest
 
 with env.prefixed('TELEGRAM_'):
     TOKEN = env.str('TOKEN')
 
 updater: Optional[Updater] = None
+
+manifest = get_manifest()
 
 
 def init():
@@ -26,23 +30,36 @@ def init():
     persistence_file = Path(__file__).resolve().parent.parent / 'data/persistence.db'
     persistence = PicklePersistence(persistence_file)
     logging.info(f'Using persistence at "{persistence_file}"')
+
     updater = Updater(TOKEN, persistence=persistence, use_context=True)
     dispatcher = updater.dispatcher
 
     def start(update: Update, context: CallbackContext):
-        update.effective_chat.send_message(text=messages['introMsg'])
+        update.effective_chat.send_message(text=messages['intro'])
         if not context.user_data.get('auth_pass', False):
             button = InlineKeyboardButton('开始认证', callback_data=json.dumps({
                 'type': 'auth'
             }))
             reply_markup = InlineKeyboardMarkup.from_button(button)
-            update.effective_chat.send_message(text=messages['introMsgAuth'],
+            update.effective_chat.send_message(text=messages['introAuth'],
                                                reply_markup=reply_markup)
         else:
             start_auth(update, context)
 
     start_handler = CommandHandler('start', start)
     dispatcher.add_handler(start_handler)
+
+    def limits(update: Update, context: CallbackContext):
+        if 'limits_used' not in context.user_data:
+            context.user_data['limits_used'] = 0
+        limits_all = 30
+        limits_used = context.user_data['limits_used']
+        limits_remain = limits_all - limits_used
+        message = messages['limits'] % (limits_all, limits_used, limits_remain)
+        update.effective_chat.send_message(text=message)
+
+    limits_handler = CommandHandler('limits', limits)
+    dispatcher.add_handler(limits_handler)
 
     def start_auth(update: Update, context: CallbackContext):
         if context.user_data.get('auth_pass', False):
@@ -76,11 +93,17 @@ def init():
             if auth_data is not None:
                 if _check_auth(auth_data['device_code']):
                     message = messages['authSuccess']
-                    button = InlineKeyboardButton('查看授权',
-                                                  url=get_check_auth_url_for_user())
-                    reply_markup = InlineKeyboardMarkup.from_button(button)
+                    buttons = [
+                        InlineKeyboardButton('查看授权',
+                                             url=get_check_auth_url_for_user()),
+                        InlineKeyboardButton('查看限额',
+                                             callback_data=json.dumps({
+                                                 'type': 'limits'
+                                             }))
+                    ]
+                    reply_markup = InlineKeyboardMarkup.from_row(buttons)
                     context.user_data['auth_pass'] = True
-                    del context.user_data['auth_data']
+                    context.user_data.pop('auth_data', None)
                     update.effective_message.delete()
                     update.effective_user.send_message(text=message,
                                                        reply_markup=reply_markup)
@@ -113,9 +136,75 @@ def init():
             start_auth(update, context)
         elif op_type == 'auth_check':
             check_auth(update, context)
+        elif op_type == 'limits':
+            limits(update, context)
 
     callback_query_handler = CallbackQueryHandler(callback_query_callback)
     dispatcher.add_handler(callback_query_handler)
+
+    def _match_regex(pattern: str, query: str) -> Optional[str]:
+        pattern = manifest['patterns'][pattern]
+        regex = re.compile(pattern, re.IGNORECASE)
+        result = regex.match(query)
+        if result is not None:
+            return result.group().upper()
+        return None
+
+    def search(update: Update, context: CallbackContext):
+        if context.user_data.get('auth_pass', False):
+            query = str(update.message.text).strip()
+
+            if len(query) == 0:
+                update.effective_chat.send_message(messages['searchNonEmpty'])
+                return
+
+            grade_match = _match_regex('grade', query)
+            if grade_match is not None:
+                logging.debug(f'Grade match: {grade_match}')
+                # TODO: Show grade
+                return
+
+            class_match = _match_regex('class', query)
+            if class_match is not None:
+                logging.debug(f'Class match: {class_match}')
+                # TODO: Show class
+                return
+
+            student_match = _match_regex('student', query)
+            if student_match is not None:
+                logging.debug(f'Student match: {student_match}')
+                # TODO: Show student
+                return
+
+            facets = {}
+            query_parsed = []
+            query_parts = query.split(' ')
+            if len(query_parts) > 1:
+                for part in query_parts:
+                    part = part.strip()
+                    if len(part) == 0:
+                        continue
+                    if 'gradeId' not in facets:
+                        grade_match = _match_regex('grade', part)
+                        if grade_match is not None:
+                            facets['gradeId'] = grade_match
+                            continue
+                    if 'classId' not in facets:
+                        class_match = _match_regex('class', part)
+                        if class_match is not None:
+                            facets['classId'] = class_match
+                            continue
+                    query_parsed.append(part)
+                query = ' '.join(query_parsed)
+
+            logging.debug(f'Search: {query} with facets {facets}')
+            # TODO: Search
+        else:
+            context.user_data.pop('auth_data', None)
+            check_auth(update, context)
+
+    search_handler = MessageHandler(Filters.text & (~Filters.command), search)
+    dispatcher.add_handler(search_handler)
 
     logging.info('Bot initialized')
 

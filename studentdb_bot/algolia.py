@@ -14,7 +14,7 @@ client = SearchClient.create(APP_ID, API_KEY)
 
 index = client.init_index('students')
 
-logging.info('Algolia initialized.')
+logging.info('Algolia initialized')
 
 
 def update_students(students: List[Student]):
