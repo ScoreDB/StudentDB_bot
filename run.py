@@ -22,7 +22,7 @@ if args.debug:
 
 if __name__ == '__main__':
     import studentdb_bot
-
+    studentdb_bot.init()
     if args.update:
         studentdb_bot.update_database()
     else:
