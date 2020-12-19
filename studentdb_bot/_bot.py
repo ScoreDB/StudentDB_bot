@@ -88,6 +88,8 @@ def init():
                                                reply_markup=reply_markup)
         else:
             start_auth(update, context)
+        if 'group' in update.effective_chat.type:
+            update.effective_chat.send_message(text=messages['groupHint'])
 
     start_handler = CommandHandler('start', start)
     dispatcher.add_handler(start_handler)
@@ -104,10 +106,12 @@ def init():
     dispatcher.add_handler(limits_handler)
 
     def start_auth(update: Update, context: CallbackContext):
+        if 'group' in update.effective_chat.type:
+            update.effective_chat.send_message(text='身份认证将在私聊中进行哦~')
         if context.user_data.get('auth_pass', False):
             button = InlineKeyboardButton('查看授权', url=get_check_auth_url_for_user())
             reply_markup = InlineKeyboardMarkup.from_button(button)
-            update.effective_chat.send_message(text=messages['authHint'],
+            update.effective_user.send_message(text=messages['authHint'],
                                                reply_markup=reply_markup,
                                                disable_web_page_preview=True)
         else:
@@ -119,12 +123,10 @@ def init():
                 'type': 'auth_check'
             }))
             reply_markup = InlineKeyboardMarkup.from_button(button)
-            update.effective_chat.send_message(text=message,
+            update.effective_user.send_message(text=message,
                                                reply_markup=reply_markup,
                                                disable_web_page_preview=True)
             context.user_data['auth_data'] = auth_data
-        if 'group' in update.effective_chat.type:
-            update.effective_chat.send_message(text=messages['groupHint'])
 
     start_auth_handler = CommandHandler('auth', start_auth)
     dispatcher.add_handler(start_auth_handler)
@@ -152,7 +154,7 @@ def init():
                 else:
                     message = messages['authFailed']
                     reply_to = update.effective_message.message_id
-                    update.effective_chat.send_message(text=message,
+                    update.effective_user.send_message(text=message,
                                                        reply_to_message_id=reply_to)
             else:
                 message = messages['authNotStarted']
@@ -160,12 +162,10 @@ def init():
                     'type': 'auth'
                 }))
                 reply_markup = InlineKeyboardMarkup.from_button(button)
-                update.effective_message.delete()
                 update.effective_chat.send_message(text=message,
                                                    reply_markup=reply_markup)
         else:
             message = messages['authRedundant']
-            update.effective_message.delete()
             update.effective_chat.send_message(text=message)
             start_auth(update, context)
 
@@ -330,9 +330,10 @@ def init():
                     data = search_class(class_match)
                     context.user_data['limits_used'] += 1
                     context.bot_data['classes_cache'][class_match] = data
-                    for student in data['students']:
-                        if student['id'] not in context.bot_data['students_cache']:
-                            context.bot_data['students_cache'][student['id']] = student
+                    if data is not False:
+                        for student in data['students']:
+                            if student['id'] not in context.bot_data['students_cache']:
+                                context.bot_data['students_cache'][student['id']] = student
                 render_class(update, context, data, page)
                 return
 
@@ -375,9 +376,10 @@ def init():
                         data = search_class(facets["classId"])
                         context.user_data['limits_used'] += 1
                         context.bot_data['classes_cache'][facets["classId"]] = data
-                        for student in data['students']:
-                            if student['id'] not in context.bot_data['students_cache']:
-                                context.bot_data['students_cache'][student['id']] = student
+                        if data is not False:
+                            for student in data['students']:
+                                if student['id'] not in context.bot_data['students_cache']:
+                                    context.bot_data['students_cache'][student['id']] = student
                     render_class(update, context, data, page)
                     return
 
@@ -388,9 +390,10 @@ def init():
                 data = universal_search(query, facets)
                 context.user_data['limits_used'] += 1
                 context.bot_data['search_cache'][cache_key] = data
-                for student in data:
-                    if student['id'] not in context.bot_data['students_cache']:
-                        context.bot_data['students_cache'][student['id']] = student
+                if type(data) == list:
+                    for student in data:
+                        if student['id'] not in context.bot_data['students_cache']:
+                            context.bot_data['students_cache'][student['id']] = student
             render_search(update, context, data, raw_query, page)
         else:
             context.user_data.pop('auth_data', None)
