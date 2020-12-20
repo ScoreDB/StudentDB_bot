@@ -349,6 +349,10 @@ def init():
             query_parts = []
             if raw_query is None:
                 raw_query = str(update.effective_message.text)
+                if 'group' in update.effective_chat.type and \
+                    '/search' not in raw_query and \
+                    f'@{context.bot.username}' not in raw_query:
+                    return
             for i in raw_query.split(' '):
                 i = i.strip()
                 if i[0] != '@' and i[0] != '/' and len(i) > 0:
