@@ -72,6 +72,13 @@ def _init_limits(user_data: dict):
         user_data['limits_used'] = 0
 
 
+def gender_emoji(gender: str) -> str:
+    if gender == '男':
+        return '♂️'
+    elif gender == '女':
+        return '♀️'
+
+
 def _match_regex(pattern: str, query: str) -> Optional[str]:
     pattern = manifest['patterns'][pattern]
     regex = re.compile(pattern, re.IGNORECASE)
@@ -226,7 +233,10 @@ def init():
         page_data = data[page_start:page_end]
         message += f'正在显示第 {page + 1} / {pages_count} 页：\n'
         for i, student in enumerate(page_data):
-            message += f'{i + 1}. <strong>{student["id"]}</strong> {student["name"]}\n'
+            message += f'{i + 1}. ' \
+                       f'<strong>{student["id"]}</strong> ' \
+                       f'{student["name"]} ' \
+                       f'{gender_emoji(student["gender"])}\n'
         message += '\n点击下方相应按钮可以查看学生详情'
         buttons = [
             [
@@ -263,10 +273,10 @@ def init():
             return _update_or_reply(update, context, text=messages['noMatch'])
         classes_count = len(data['classes'].keys())
         students_count = sum(data['classes'].values())
-        message = f'<strong>{data["grade"]} 年级</strong>\n\n'
+        message = f'🏫 <strong>{data["grade"]} 年级</strong>\n\n'
         message += f'此年级共有 {classes_count} 个班级和 {students_count} 名学生：'
         for class_id, count in data['classes'].items():
-            message += f'\n<strong>{class_id}</strong> — {count} 名学生'
+            message += f'\n🧑‍🏫 <strong>{class_id}</strong> — {count} 名学生'
         _update_or_reply(update, context, text=message)
 
     def render_class(update: Update, context: CallbackContext,
@@ -274,7 +284,7 @@ def init():
         if data is False:
             return _update_or_reply(update, context, text=messages['noMatch'])
         students_count = len(data['students'])
-        message = f'<strong>{data["class_id"]} 班</strong>\n\n'
+        message = f'🧑‍🏫 <strong>{data["class_id"]} 班</strong>\n\n'
         message += f'此班级共有 {students_count} 名学生\n'
         _render_students_pagination(update, context, message, data['students'], {
             'type': 'class_data',
@@ -286,15 +296,14 @@ def init():
                        data: Student, from_page=None):
         if data is False:
             return _update_or_reply(update, context, text=messages['noMatch'])
-        message = f'<strong>{data["name"]}</strong>\n'
-        message += f'学号：<strong>{data["id"]}</strong>\n'
-        message += f'所在班级：{data["classId"]}\n'
-        message += f'性别：{data["gender"]}\n'
+        gender = gender_emoji(data["gender"])
+        message = f'🧑‍🎓 <strong>{data["id"]} {data["name"]}</strong> {gender}\n'
+        message += f'🏫 所在班级：{data["classId"]}\n'
         if len(data.get('birthday', '')) > 0:
             parts = data['birthday'].split('-')
-            message += f'生日：{parts[0]} 年 {parts[1]} 月 {parts[2]} 日\n'
+            message += f'🎂 生日：{parts[0]} 年 {parts[1]} 月 {parts[2]} 日\n'
         if len(data.get('eduid', '')) > 0:
-            message += f'教育 ID：{data["eduid"]}'
+            message += f'🆔 教育 ID：{data["eduid"]}'
         buttons = []
         if from_page is not None:
             if type(from_page) != str or not oc.exists(from_page):
@@ -315,7 +324,7 @@ def init():
             return _update_or_reply(update, context, text=messages['noMatch'])
         if len(data) == 1:
             return render_student(update, context, data[0])
-        _render_students_pagination(update, context, '搜索结果：\n\n', data, {
+        _render_students_pagination(update, context, '🔍 搜索结果：\n\n', data, {
             'type': 'search',
             'data': raw_query,
             'page': page
