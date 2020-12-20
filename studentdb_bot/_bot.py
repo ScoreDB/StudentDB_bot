@@ -9,9 +9,10 @@ from math import ceil
 from pathlib import Path
 from typing import Optional, List
 
+from requests import HTTPError
 from telegram import Update, ChatAction, \
     InlineKeyboardButton, InlineKeyboardMarkup, \
-    ParseMode
+    InputMediaPhoto, ParseMode
 from telegram.ext import Updater, CallbackContext, \
     CallbackQueryHandler, CommandHandler, Defaults, \
     Filters, MessageHandler, PicklePersistence
@@ -24,7 +25,7 @@ from .algolia import search_grade, search_class, \
     search_student, universal_search
 from .github import check_auth as _check_auth, \
     get_check_auth_url_for_user, get_device_code, \
-    get_manifest
+    get_file, get_manifest
 from .types import Manifest, Student, GradeData, ClassData
 
 TOKEN = env.str('TELEGRAM_TOKEN')
@@ -308,15 +309,21 @@ def init():
         if from_page is not None:
             if type(from_page) != str or not oc.exists(from_page):
                 from_page = oc.store(from_page)
-            buttons.append(InlineKeyboardButton('返回上一页',
-                                                callback_data=from_page))
-        buttons.append(InlineKeyboardButton('查看所在班级',
-                                            callback_data=oc.store({
-                                                'type': 'search',
-                                                'data': data['classId']
-                                            })))
+            buttons.append([
+                InlineKeyboardButton('返回上一页', callback_data=from_page)
+            ])
+        buttons.append([
+            InlineKeyboardButton('查看所在班级', callback_data=json.dumps({
+                'type': 'search',
+                'data': data['classId']
+            })),
+            InlineKeyboardButton('获取照片', callback_data=json.dumps({
+                'type': 'photo',
+                'data': data['id']
+            }))
+        ])
         _update_or_reply(update, context, text=message,
-                         reply_markup=InlineKeyboardMarkup.from_row(buttons))
+                         reply_markup=InlineKeyboardMarkup(buttons))
 
     def render_search(update: Update, context: CallbackContext,
                       data: List[Student], raw_query: str, page: int = 0):
@@ -446,7 +453,30 @@ def init():
     search_command_handler = CommandHandler('search', search)
     dispatcher.add_handler(search_command_handler)
 
-    @send_action(ChatAction.TYPING)
+    def get_photo(update: Update, context: CallbackContext,
+                  student: str):
+        data = context.bot_data['students_cache'].get(student, None)
+        if data is None:
+            data = search_student(student)
+            context.bot_data['students_cache'][student] = data
+        if data is not False:
+            update.effective_chat.send_action(action=ChatAction.UPLOAD_PHOTO)
+            photos = []
+            for photo_template in manifest['photos']:
+                photo_path = photo_template.format(**data)
+                try:
+                    photo_url = get_file(photo_path, False)
+                    photos.append(photo_url)
+                except HTTPError:
+                    pass
+            if len(photos) > 0:
+                medias = [InputMediaPhoto(i) for i in photos]
+                update.effective_message.reply_media_group(media=medias,
+                                                           quote=True)
+                return
+        update.effective_message.reply_text(messages['photoNotFound'],
+                                            quote=True)
+
     def callback_query_callback(update: Update, context: CallbackContext):
         raw_data = update.callback_query.data
         if raw_data is None:
@@ -479,6 +509,10 @@ def init():
             if student_data is not None:
                 from_page = data.get('from', None)
                 render_student(update, context, student_data, from_page)
+        elif op_type == 'photo':
+            student_id = data.get('data', None)
+            if student_id is not None:
+                get_photo(update, context, student_id)
 
     callback_query_handler = CallbackQueryHandler(callback_query_callback)
     dispatcher.add_handler(callback_query_handler)

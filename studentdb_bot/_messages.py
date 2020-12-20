@@ -13,6 +13,7 @@ messages = {
     'limits': '%s你的搜索限额：\n每日共 %s 次；今日已使用：%s 次；今日剩余：%s 次',
     'limitsReached': '已达到今日搜索限额，请明天再来吧~',
     'noMatch': '未搜索到符合条件的结果',
+    'photoNotFound': '未找到请求的照片，可能是由于 StudentDB 中缺少相关数据',
     'pkNotFound': 'Private key file not found. Please place your private key in the `keys` directory.',
     'searchNonEmpty': '搜索请求不能为空'
 }

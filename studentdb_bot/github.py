@@ -3,7 +3,7 @@ import logging
 from math import floor
 from pathlib import Path
 from time import time as timestamp
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, Union
 
 import jwt
 import requests
@@ -94,17 +94,22 @@ def get_manifest() -> Manifest:
     return manifest_cache
 
 
-def get_file(path) -> bytes:
+def get_file(path, content_only=True) -> Union[bytes, str]:
     token = _get_access_token()
     if path[0] == '/':
         path = path[1:]
     url = f'{API_BASE_URL}/repos/{REPOSITORY}/contents/{path}'
+    accept = 'application/vnd.github.v3.raw' if content_only else \
+        'application/vnd.github.v3+json'
     response = requests.get(url, headers={
-        'Accept': 'application/vnd.github.v3.raw',
+        'Accept': accept,
         'Authorization': f'token {token}'
     })
     response.raise_for_status()
-    return response.content
+    if content_only:
+        return response.content
+    else:
+        return response.json()['download_url']
 
 
 def _get_current_user(token: str) -> Dict[str, str]:
