@@ -1,16 +1,21 @@
 import json
 import logging
 import re
+import sys
+import traceback
 from datetime import datetime, timezone, timedelta
+from functools import wraps
 from math import ceil
 from pathlib import Path
 from typing import Optional, List
 
-from telegram import Update, InlineKeyboardButton, \
-    InlineKeyboardMarkup, ParseMode
+from telegram import Update, ChatAction, \
+    InlineKeyboardButton, InlineKeyboardMarkup, \
+    ParseMode
 from telegram.ext import Updater, CallbackContext, \
     CallbackQueryHandler, CommandHandler, Defaults, \
     Filters, MessageHandler, PicklePersistence
+from telegram.utils.helpers import mention_html
 
 from ._env import env
 from ._messages import messages
@@ -22,8 +27,8 @@ from .github import check_auth as _check_auth, \
     get_manifest
 from .types import Manifest, Student, GradeData, ClassData
 
-with env.prefixed('TELEGRAM_'):
-    TOKEN = env.str('TOKEN')
+TOKEN = env.str('TELEGRAM_TOKEN')
+DEVELOPER_ID = env.str('DEVELOPER_ID')
 
 tz = timezone(timedelta(hours=8), 'Asia/Shanghai')
 
@@ -32,6 +37,19 @@ updater: Optional[Updater] = None
 manifest: Manifest = get_manifest()
 
 oc: ObjectCache
+
+
+def send_action(action: str):
+    def decorator(func):
+        @wraps(func)
+        def command_func(update: Update, context: CallbackContext,
+                         *args, **kwargs):
+            update.effective_chat.send_action(action=action)
+            return func(update, context, *args, **kwargs)
+
+        return command_func
+
+    return decorator
 
 
 def _init_caches(bot_data: dict):
@@ -45,12 +63,12 @@ def _init_caches(bot_data: dict):
 
 
 def _init_limits(user_data: dict):
-    timenow = datetime.now(tz)
+    time_now = datetime.now(tz)
     if 'limits_start' not in user_data:
-        user_data['limits_start'] = timenow
-    delta = timenow - user_data['limits_start']
+        user_data['limits_start'] = time_now
+    delta = time_now - user_data['limits_start']
     if delta.days >= 1 or 'limits_used' not in user_data:
-        user_data['limits_start'] = timenow
+        user_data['limits_start'] = time_now
         user_data['limits_used'] = 0
 
 
@@ -77,6 +95,7 @@ def init():
 
     _init_caches(dispatcher.bot_data)
 
+    @send_action(ChatAction.TYPING)
     def start(update: Update, context: CallbackContext):
         update.effective_chat.send_message(text=messages['intro'])
         if not context.user_data.get('auth_pass', False):
@@ -94,20 +113,31 @@ def init():
     start_handler = CommandHandler('start', start)
     dispatcher.add_handler(start_handler)
 
+    @send_action(ChatAction.TYPING)
     def limits(update: Update, context: CallbackContext):
         _init_limits(context.user_data)
+        if update.effective_user:
+            mention = mention_html(update.effective_user.id,
+                                   update.effective_user.name) + '，'
+        else:
+            mention = ''
         limits_all = 30
         limits_used = context.user_data['limits_used']
         limits_remain = limits_all - limits_used
-        message = messages['limits'] % (limits_all, limits_used, limits_remain)
+        message = messages['limits'] % (mention, limits_all,
+                                        limits_used, limits_remain)
         update.effective_chat.send_message(text=message)
 
     limits_handler = CommandHandler('limits', limits)
     dispatcher.add_handler(limits_handler)
 
+    @send_action(ChatAction.TYPING)
     def start_auth(update: Update, context: CallbackContext):
         if 'group' in update.effective_chat.type:
-            update.effective_chat.send_message(text='身份认证将在私聊中进行哦~')
+            mention = mention_html(update.effective_user.id,
+                                   update.effective_user.name)
+            message = f'{mention}，身份认证将在私聊中进行哦~'
+            update.effective_chat.send_message(text=message)
         if context.user_data.get('auth_pass', False):
             button = InlineKeyboardButton('查看授权', url=get_check_auth_url_for_user())
             reply_markup = InlineKeyboardMarkup.from_button(button)
@@ -131,6 +161,7 @@ def init():
     start_auth_handler = CommandHandler('auth', start_auth)
     dispatcher.add_handler(start_auth_handler)
 
+    @send_action(ChatAction.TYPING)
     def check_auth(update: Update, context: CallbackContext):
         if not context.user_data.get('auth_pass', False):
             auth_data: Optional[dict] = context.user_data.get('auth_data')
@@ -259,14 +290,14 @@ def init():
         message += f'学号：<strong>{data["id"]}</strong>\n'
         message += f'所在班级：{data["classId"]}\n'
         message += f'性别：{data["gender"]}\n'
-        if data.get('birthday', None) is not None:
+        if len(data.get('birthday', '')) > 0:
             parts = data['birthday'].split('-')
             message += f'生日：{parts[0]} 年 {parts[1]} 月 {parts[2]} 日\n'
-        if data.get('eduid', None) is not None:
+        if len(data.get('eduid', '')) > 0:
             message += f'教育 ID：{data["eduid"]}'
         buttons = []
         if from_page is not None:
-            if type(from_page) != str or not oc.has(from_page):
+            if type(from_page) != str or not oc.exists(from_page):
                 from_page = oc.store(from_page)
             buttons.append(InlineKeyboardButton('返回上一页',
                                                 callback_data=from_page))
@@ -290,6 +321,7 @@ def init():
             'page': page
         })
 
+    @send_action(ChatAction.TYPING)
     def search(update: Update, context: CallbackContext,
                raw_query: Optional[str] = None, page: int = 0):
         _init_limits(context.user_data)
@@ -405,6 +437,7 @@ def init():
     search_command_handler = CommandHandler('search', search)
     dispatcher.add_handler(search_command_handler)
 
+    @send_action(ChatAction.TYPING)
     def callback_query_callback(update: Update, context: CallbackContext):
         raw_data = update.callback_query.data
         if raw_data is None:
@@ -441,8 +474,34 @@ def init():
     callback_query_handler = CallbackQueryHandler(callback_query_callback)
     dispatcher.add_handler(callback_query_handler)
 
+    def error(update: Update, context: CallbackContext):
+        mention = mention_html(update.effective_user.id,
+                               update.effective_user.name)
+        if update.effective_message:
+            message = messages['error']
+            update.effective_message.reply_text(text=message)
+        trace = ''.join(traceback.format_tb(sys.exc_info()[2]))
+        payload = ''
+        if update.effective_user:
+            payload += f'在与 {mention} '
+        if update.effective_chat and update.effective_chat.title:
+            mention = mention_html(update.effective_chat.id,
+                                   update.effective_chat.title)
+            payload += f'在 {mention} 中'
+        if update.effective_user:
+            payload += '聊天时'
+        if update.poll:
+            payload += f'在 Poll ({update.poll.id}) 中'
+        exception = f'{trace}\n{type(context.error).__name__}: {context.error}'
+        message = messages['errorReport'] % (payload, exception)
+        context.bot.send_message(DEVELOPER_ID, text=message)
+        raise
+
+    dispatcher.add_error_handler(error)
+
     logging.info('Bot initialized')
 
 
 def run():
     updater.start_polling()
+    updater.idle()
