@@ -6,9 +6,9 @@ from typing import List
 
 import pypinyin
 
-from ._database_models import Student
 from .algolia import update_students
 from .github import get_manifest, get_file
+from .types import Student
 
 
 def generate_pinyin(name: str) -> List[str]:
