@@ -28,6 +28,9 @@ from .github import check_auth as _check_auth, \
     get_file, get_manifest
 from .types import Manifest, Student, GradeData, ClassData
 
+HOST = env.str('HOST', '0.0.0.0')
+PORT = env.int('PORT', 8443)
+WEBHOOK_URL = env.str('WEBHOOK_URL', None)
 TOKEN = env.str('TELEGRAM_TOKEN')
 DEVELOPER_ID = env.str('DEVELOPER_ID')
 
@@ -551,4 +554,17 @@ def init():
 
 def run():
     updater.start_polling()
+    updater.idle()
+
+
+def run_webhook(url: str):
+    if url.lower() == 'env':
+        url = WEBHOOK_URL
+    if url is None or url == '':
+        raise ValueError("Webhook url can't be empty.")
+    if url[-1] != '/':
+        url += '/'
+    url += TOKEN
+    updater.start_webhook(HOST, PORT, TOKEN)
+    updater.bot.set_webhook(url)
     updater.idle()
