@@ -557,9 +557,8 @@ def run():
     updater.idle()
 
 
-def run_webhook(url: str):
-    if url.lower() == 'env':
-        url = WEBHOOK_URL
+def run_webhook():
+    url = WEBHOOK_URL
     if url is None or url == '':
         raise ValueError("Webhook url can't be empty.")
     if url[-1] != '/':

@@ -9,8 +9,7 @@ parser = ArgumentParser()
 parser.add_argument('-u', '--update', action='store_true',
                     help='update the data and exit')
 
-parser.add_argument('-w', '--webhook', metavar='url',
-                    default='env', type=str,
+parser.add_argument('-w', '--webhook', action='store_true',
                     help='run in webhook mode')
 
 parser.add_argument('--debug', action='store_true',
@@ -28,6 +27,6 @@ if __name__ == '__main__':
     if args.update:
         studentdb_bot.update_database()
     elif args.webhook:
-        studentdb_bot.run_webhook(args.webhook)
+        studentdb_bot.run_webhook()
     else:
         studentdb_bot.run()
