@@ -224,14 +224,14 @@ def init():
                                     message: str, data: List[Student],
                                     page_ref: dict):
         students_count = len(data)
-        pages_count = ceil(students_count / 12)
+        pages_count = ceil(students_count / 9)
         page = page_ref.get('page', 0)
         if page < 0:
             page = 0
         if page >= pages_count:
             page = pages_count - 1
-        page_start = page * 12
-        page_end = (page + 1) * 12
+        page_start = page * 9
+        page_end = (page + 1) * 9
         if page_end > students_count:
             page_end = students_count
         page_data = data[page_start:page_end]
@@ -245,14 +245,14 @@ def init():
         buttons = [
             [
                 InlineKeyboardButton(
-                    f'{p * 4 + i + 1}. {student["name"]}',
+                    f'{p * 3 + i + 1}. {student["name"]}',
                     callback_data=oc.store({
                         'type': 'student_data',
                         'data': student['id'],
                         'from': page_ref
                     })
                 )
-                for i, student in enumerate(page_data[p * 4:(p + 1) * 4])
+                for i, student in enumerate(page_data[p * 3:(p + 1) * 3])
             ]
             for p in range(0, 3)
         ]
