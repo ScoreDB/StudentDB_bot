@@ -1,6 +1,7 @@
-algoliasearch>=2.0,<3.0
 environs
-PyJWT<2.0
-pypinyin
+expiringdict
+python-dateutil
 python-telegram-bot
+pytz
 requests
+scoredb-sdk

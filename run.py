@@ -1,32 +1,28 @@
 #!/usr/bin/env python3
 
-from argparse import ArgumentParser
+import logging
 
-import logging_config
+from environs import Env
 
-parser = ArgumentParser()
+import scoredb_bot
 
-parser.add_argument('-u', '--update', action='store_true',
-                    help='update the data and exit')
+env = Env()
+env.read_env()
 
-parser.add_argument('-w', '--webhook', action='store_true',
-                    help='run in webhook mode')
+debug = env.bool('DEBUG', default=False)
+logging_level = logging.DEBUG if debug else logging.INFO
 
-parser.add_argument('--debug', action='store_true',
-                    help='enable debug mode')
+logger = logging.getLogger()
+logger.setLevel(logging_level)
 
-args = parser.parse_args()
+stream = logging.StreamHandler()
+stream.setLevel(logging_level)
 
-if args.debug:
-    logging_config.force_debug()
+formatter = logging.Formatter('[%(asctime)s][%(levelname)s] (%(module)s) %(message)s')
+stream.setFormatter(formatter)
 
-if __name__ == '__main__':
-    import studentdb_bot
-    studentdb_bot.init()
+logger.handlers = []
+logger.addHandler(stream)
 
-    if args.update:
-        studentdb_bot.update_database()
-    elif args.webhook:
-        studentdb_bot.run_webhook()
-    else:
-        studentdb_bot.run()
+scoredb_bot.init()
+scoredb_bot.run()
