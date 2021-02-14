@@ -38,7 +38,7 @@ def fetch_student(token: str, student_id: str):
 def fetch_student_photos(token: str, student_id: str):
     photos = Client(token).studentdb.get_student_photos(student_id)
     if not photos:
-        photos = None
+        photos = []
     return photos
 
 
