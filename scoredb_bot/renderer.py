@@ -29,11 +29,12 @@ def render_class(update: Update, context: CallbackContext,
         return update_or_reply(update, context, text='未找到匹配的班级')
     message = f'🧑‍🏫 <strong>{class_.id} 班</strong>\n\n'
     message += f'此班级共有 {class_.studentsCount} 名学生：\n'
-    render_students_pagination(update, context, class_.students, message, {
+    kwargs = render_students_pagination(class_.students, message, {
         'event_type': 'class',
         'class_id': class_.id,
         'page': page
     })
+    update_or_reply(update, context, **kwargs)
 
 
 def render_student(update: Update, context: CallbackContext,
@@ -70,16 +71,16 @@ def render_search(update: Update, context: CallbackContext,
     if pagination.count() == 0:
         update_or_reply(update, context, text='未搜索到符合条件的结果')
     else:
-        message = f'🔍 <strong>{query}</strong> 的搜索结果：\n\n'
-        render_students_pagination(update, context, pagination.data, message, {
+        message = f'🔍 “<strong>{query}</strong>” 的搜索结果：\n\n'
+        kwargs = render_students_pagination(pagination, message, {
             'event_type': 'search',
             'query': query,
             'page': pagination.current_page
         })
+        update_or_reply(update, context, **kwargs)
 
 
-def render_students_pagination(update: Update, context: CallbackContext,
-                               pagination: Union[Pagination[StudentSummary], List[StudentSummary]],
+def render_students_pagination(pagination: Union[Pagination[StudentSummary], List[StudentSummary]],
                                prepend_message: str,
                                page_ref: dict):
     message = prepend_message
@@ -121,6 +122,10 @@ def render_students_pagination(update: Update, context: CallbackContext,
         for p in range(0, 3)
     ]
 
+    buttons.append([
+        InlineKeyboardButton('⚠ 获取本页所有照片')
+    ])
+
     switch_page_buttons = []
     if pagination.has_previous_page():
         target_page_ref = page_ref.copy()
@@ -138,7 +143,8 @@ def render_students_pagination(update: Update, context: CallbackContext,
     if len(switch_page_buttons) > 0:
         buttons.append(switch_page_buttons)
 
-    update_or_reply(update, context,
-                    text=message,
-                    reply_markup=InlineKeyboardMarkup(buttons),
-                    parse_mode=ParseMode.HTML)
+    return {
+        'text': message,
+        'reply_markup': InlineKeyboardMarkup(buttons),
+        'parse_mode': ParseMode.HTML
+    }

@@ -11,7 +11,7 @@ from ..utils import verify_auth, encode_data, update_or_reply, is_group, send_ac
 
 def search(update: Update, context: CallbackContext,
            query: str, page: int = 1):
-    token = context.user_data.get('token', None)
+    token = context.user_data.get('token')
     try:
         if is_grade_id(query):
             render_grade(update, context, fetch_grade(token, query))
@@ -25,6 +25,8 @@ def search(update: Update, context: CallbackContext,
         if e.response.status_code == 403 or e.response.status_code == 401:
             update_or_reply(update, context, text='服务器拒绝访问，请重新进行身份认证')
             re_auth_callback(update, context)
+        elif e.response.status_code == 429:
+            update_or_reply(update, context, text='请求频率过高，已被服务器限制访问，请一分钟后再试')
         else:
             raise
 
@@ -55,7 +57,8 @@ def message_search(update: Update, context: CallbackContext):
         search(update, context, update.effective_message.text)
 
 
-message_search_handler = MessageHandler(Filters.text & (~Filters.command), message_search, run_async=True)
+message_search_filters = Filters.text & (~(Filters.command | Filters.via_bot(allow_empty=True)))
+message_search_handler = MessageHandler(message_search_filters, message_search, run_async=True)
 
 
 def class_callback(update: Update, context: CallbackContext,

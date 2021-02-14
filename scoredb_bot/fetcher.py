@@ -43,5 +43,5 @@ def fetch_student_photos(token: str, student_id: str):
 
 
 @lru_cache(maxsize=64)
-def request_search(token: str, query: str, page: int = 1):
-    return Client(token).studentdb.search_student(query, page)
+def request_search(token: str, query: str, page: int = 1, page_size: int = 9):
+    return Client(token).studentdb.search_student(query, page, page_size)
