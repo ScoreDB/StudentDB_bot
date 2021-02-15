@@ -122,9 +122,9 @@ def render_students_pagination(pagination: Union[Pagination[StudentSummary], Lis
         for p in range(0, 3)
     ]
 
-    buttons.append([
-        InlineKeyboardButton('⚠ 获取本页所有照片')
-    ])
+    # buttons.append([
+    #     InlineKeyboardButton('⚠ 获取本页所有照片')
+    # ])
 
     switch_page_buttons = []
     if pagination.has_previous_page():
