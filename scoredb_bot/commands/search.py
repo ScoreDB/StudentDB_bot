@@ -11,41 +11,41 @@ from ..utils import verify_auth, encode_data, update_or_reply, is_group, send_ac
 
 def search(update: Update, context: CallbackContext,
            query: str, page: int = 1):
-    token = context.user_data.get('token')
-    try:
-        if is_grade_id(query):
-            render_grade(update, context, fetch_grade(token, query))
-        elif is_class_id(query):
-            render_class(update, context, fetch_class(token, query), page)
-        elif is_student_id(query):
-            render_student(update, context, fetch_student(token, query))
-        else:
-            render_search(update, context, request_search(token, query, page), query)
-    except HTTPError as e:
-        if e.response.status_code == 403 or e.response.status_code == 401:
-            update_or_reply(update, context, text='服务器拒绝访问，请重新进行身份认证')
-            re_auth_callback(update, context)
-        elif e.response.status_code == 429:
-            update_or_reply(update, context, text='请求频率过高，已被服务器限制访问，请一分钟后再试')
-        else:
-            raise
-
-
-@send_action(ChatAction.TYPING)
-def search_command(update: Update, context: CallbackContext):
     if verify_auth(context.user_data):
-        query = ' '.join(context.args) if context.args else None
-        if query:
-            search(update, context, query)
-        else:
-            update.effective_chat.send_message(text='搜索请求不能为空，请在命令后面加上要搜索的内容，如 <code>/search abc</code>',
-                                               parse_mode=ParseMode.HTML)
+        token = context.user_data.get('token')
+        try:
+            if is_grade_id(query):
+                render_grade(update, context, fetch_grade(token, query))
+            elif is_class_id(query):
+                render_class(update, context, fetch_class(token, query), page)
+            elif is_student_id(query):
+                render_student(update, context, fetch_student(token, query))
+            else:
+                render_search(update, context, request_search(token, query, page), query)
+        except HTTPError as e:
+            if e.response.status_code == 403 or e.response.status_code == 401:
+                update_or_reply(update, context, text='服务器拒绝访问，请重新进行身份认证')
+                re_auth_callback(update, context)
+            elif e.response.status_code == 429:
+                update_or_reply(update, context, text='请求频率过高，已被服务器限制访问，请一分钟后再试')
+            else:
+                raise
     else:
         button = InlineKeyboardButton('开始认证', callback_data=encode_data('auth'))
         reply_markup = InlineKeyboardMarkup.from_button(button)
         update_or_reply(update, context,
                         text='你必须先完成身份认证才能开始查询哦',
                         reply_markup=reply_markup)
+
+
+@send_action(ChatAction.TYPING)
+def search_command(update: Update, context: CallbackContext):
+    query = ' '.join(context.args) if context.args else None
+    if query:
+        search(update, context, query)
+    else:
+        update.effective_chat.send_message(text='搜索请求不能为空，请在命令后面加上要搜索的内容，如 <code>/search abc</code>',
+                                           parse_mode=ParseMode.HTML)
 
 
 command_search_handler = CommandHandler('search', search_command, run_async=True)
