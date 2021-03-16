@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import CallbackContext, CallbackQueryHandler
 
 from .auth import auth_callback, re_auth_callback
-from .photos import photos_callback
+from .photos import photos_callback, all_photos_callback
 from .search import class_callback, student_callback, search_callback
 from ..cache import get_oc
 
@@ -14,12 +14,16 @@ callbacks = {
     'class': class_callback,
     'student': student_callback,
     'search': search_callback,
-    'photos': photos_callback
+    'photos': photos_callback,
+    'all_photos': all_photos_callback
 }
 
 
 def answer(update: Update, context: CallbackContext):
-    context.bot.answer_callback_query(update.callback_query.id)
+    try:
+        context.bot.answer_callback_query(update.callback_query.id)
+    except Exception:  # What may this method throw?
+        pass
 
 
 def callback(update: Update, context: CallbackContext):

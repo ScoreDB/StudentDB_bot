@@ -23,3 +23,19 @@ def photos_callback(update: Update, context: CallbackContext,
                                             quote=True)
     else:
         send_photos(update, photos)
+
+
+def all_photos_callback(update: Update, context: CallbackContext,
+                        students: List[str]):
+    token = context.user_data.get('token', None)
+    photos = []
+    for student_id in students:
+        student_photos = fetch_student_photos(token, student_id)
+        if len(student_photos) > 0:
+            photos.append(student_photos[0])
+    if len(photos) == 0:
+        update.effective_chat.send_chat_action(ChatAction.TYPING)
+        update.effective_message.reply_text(text='本页学生没有相关照片信息',
+                                            quote=True)
+    else:
+        send_photos(update, photos)
