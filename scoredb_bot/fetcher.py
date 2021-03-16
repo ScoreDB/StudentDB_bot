@@ -1,10 +1,10 @@
-from functools import cache, lru_cache
+from functools import lru_cache
 
 from requests import HTTPError
 from scoredb import Client
 
 
-@cache
+@lru_cache(maxsize=None)
 def get_client(token: str):
     return Client(token)
 
