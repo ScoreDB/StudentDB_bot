@@ -119,7 +119,7 @@ def render_students_pagination(pagination: Union[Pagination[StudentSummary], Lis
             )
             for i, student in enumerate(pagination.data[p * 3:(p + 1) * 3])
         ]
-        for p in range(0, 3)
+        for p in range(0, ceil(len(pagination.data) / 3))
     ]
 
     switch_page_buttons = []
@@ -139,11 +139,12 @@ def render_students_pagination(pagination: Union[Pagination[StudentSummary], Lis
     if len(switch_page_buttons) > 0:
         buttons.append(switch_page_buttons)
 
-    students_id = [student.id for student in pagination.data]
-    buttons.append([
-        InlineKeyboardButton('⚠ 获取本页所有照片',
-                             callback_data=encode_data('all_photos', students=students_id))
-    ])
+    if len(pagination.data) > 1:
+        students_id = [student.id for student in pagination.data]
+        buttons.append([
+            InlineKeyboardButton('⚠ 获取本页所有照片',
+                                 callback_data=encode_data('all_photos', students=students_id))
+        ])
 
     return {
         'text': message,

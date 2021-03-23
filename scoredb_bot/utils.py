@@ -12,7 +12,7 @@ from .cache import put_oc
 def encode_data(event_type: Optional[str], force_oc=False, **kwargs) -> str:
     kwargs['type'] = event_type
     json_data = json.dumps(kwargs)
-    if len(json_data.encode()) > 100 or force_oc:
+    if len(json_data.encode()) > 50 or force_oc:
         return 'oc:' + put_oc(kwargs)
     else:
         return json_data
